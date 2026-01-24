@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Stress Detection Using Natural Keystroke Dynamics</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <!-- Welcome Section -->
+        <div id="welcome-section" class="section active">
+            <h1>Stress Detection Using Natural Keystroke Dynamics</h1>
+            <h2>Welcome</h2>
+            <p>Thank you for participating in this research study. This application collects anonymized keystroke timing data to analyze typing patterns under different stress conditions.</p>
+            
+            <div class="privacy-notice">
+                <strong>🔐 Privacy & Ethics Notice:</strong>
+                <ul style="margin-top: 10px; padding-left: 20px;">
+                    <li>We do NOT store or log actual characters or typed text</li>
+                    <li>We do NOT store key values</li>
+                    <li>Only anonymized timing and derived features are collected</li>
+                    <li>No personal identifiers are required</li>
+                    <li>No login or backend connection required</li>
+                    <li>All processing happens locally on your device</li>
+                </ul>
+            </div>
+
+            <p style="margin-top: 20px;">This study involves two typing tasks that will take approximately 5-6 minutes to complete.</p>
+            
+            <button onclick="showSection('consent-section')">Continue</button>
+        </div>
+
+        <!-- Consent Section -->
+        <div id="consent-section" class="section">
+            <h1>Informed Consent</h1>
+            <p>Please read and acknowledge the following:</p>
+            
+            <div class="checkbox-container">
+                <label>
+                    <input type="checkbox" id="consent-checkbox" onchange="updateConsentButton()">
+                    I understand that this study collects anonymized keystroke timing data. I understand that no actual text or characters are stored. I consent to participate in this research study.
+                </label>
+            </div>
+
+            <button id="consent-button" onclick="handleConsent()" disabled>I Consent and Continue</button>
+        </div>
+
+        <!-- Instructions Section -->
+        <div id="instructions-section" class="section">
+            <h1>Instructions</h1>
+            <h2>Task Overview</h2>
+            <p>You will complete two typing tasks:</p>
+            <ol class="instructions-list">
+                <li><strong>Easy Task:</strong> Free writing about a topic. No timer visible. Minimum 2 minutes.</li>
+                <li><strong>Difficult Task:</strong> Copy typing from reference text. 2-minute countdown timer visible.</li>
+            </ol>
+
+            <h2>Important Guidelines</h2>
+            <ul class="instructions-list">
+                <li>Type naturally - do not try to alter your typing patterns</li>
+                <li>For the easy task, write continuously for at least 2 minutes</li>
+                <li>For the difficult task, try to copy the text as accurately as possible</li>
+                <li>A break screen will appear between tasks</li>
+                <li>After each task, you'll rate the difficulty level</li>
+            </ul>
+
+            <button onclick="startEasyTask()">Start Easy Task</button>
+        </div>
+
+        <!-- Easy Task Section -->
+        <div id="easy-task-section" class="section">
+            <h1>Easy Task: Free Writing</h1>
+            <p><strong>Prompt:</strong> Write about your favorite movie or hobby. Describe what you like about it, why it interests you, and any memorable experiences related to it.</p>
+            <p class="time-elapsed" id="easy-time-elapsed">Time elapsed: 0:00</p>
+            <textarea id="easy-textarea" placeholder="Start typing here..."></textarea>
+            <button id="easy-continue-button" onclick="finishEasyTask()" disabled>Continue (Minimum 2 minutes required)</button>
+        </div>
+
+        <!-- Break Section -->
+        <div id="break-section" class="section">
+            <h1>Break Time</h1>
+            <p>Please take a short break before the next task.</p>
+            <div class="break-timer" id="break-timer">30</div>
+            <p style="text-align: center;">The next task will begin automatically...</p>
+        </div>
+
+        <!-- Difficult Task Section -->
+        <div id="difficult-task-section" class="section">
+            <h1>Difficult Task: Copy Typing</h1>
+            <p><strong>Instructions:</strong> Copy the text below as accurately as possible. You have 2 minutes.</p>
+            <div class="timer" id="difficult-timer">2:00</div>
+            <div class="reference-text" id="reference-text">
+Type this EXACTLY: The quick Brown Fox jumps over 123 lazy dogs!
+Special characters: @#$%^&*()_+-=[]{}|;':",./<>?
+Numbers: 9876543210
+MIXED case: AbCdEfGhIjKlMnOpQrStUvWxYz
+Complex text: Hello World! How are you? I'm doing well, thank you.
+Math expressions: 2+2=4, 10*5=50, 100/2=50
+More symbols: ~`!@#$%^&*()_+-={}[]|:";'<>?,.
+            </div>
+            <textarea id="difficult-textarea" placeholder="Type the text above here..."></textarea>
+            <button id="difficult-continue-button" onclick="finishDifficultTask()" disabled>Continue</button>
+        </div>
+
+        <!-- Rating Section -->
+        <div id="rating-section" class="section">
+            <h1>Task Difficulty Rating</h1>
+            <p>Please rate how difficult you found the task you just completed:</p>
+            <div class="rating-scale">
+                <div class="rating-option" onclick="selectRating(1)">
+                    <span class="number">1</span>
+                    <span class="label">Very Easy</span>
+                </div>
+                <div class="rating-option" onclick="selectRating(2)">
+                    <span class="number">2</span>
+                    <span class="label">Easy</span>
+                </div>
+                <div class="rating-option" onclick="selectRating(3)">
+                    <span class="number">3</span>
+                    <span class="label">Moderate</span>
+                </div>
+                <div class="rating-option" onclick="selectRating(4)">
+                    <span class="number">4</span>
+                    <span class="label">Difficult</span>
+                </div>
+                <div class="rating-option" onclick="selectRating(5)">
+                    <span class="number">5</span>
+                    <span class="label">Very Difficult</span>
+                </div>
+            </div>
+            <button id="rating-continue-button" onclick="handleRating()" disabled>Continue</button>
+        </div>
+
+        <!-- Completion Section -->
+        <div id="completion-section" class="section">
+            <h1>Thank You!</h1>
+            <p>You have successfully completed the study. Your anonymized keystroke data has been processed.</p>
+            <p style="margin-top: 20px; color: #666;">The CSV file contains only anonymized timing features. No actual text or characters are included.</p>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+
+</body>
+</html>
