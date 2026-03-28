@@ -5,25 +5,32 @@
   "main": "src/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "electron . --dev"
+    "build": "electron-builder --win"
   },
   "dependencies": {
-    "uiohook-napi": "^1.5.5"
+    "uiohook-napi": "^1.5.4"
   },
   "devDependencies": {
+    "electron": "^41.1.0",
     "electron-builder": "^24.9.1"
   },
   "build": {
     "appId": "com.cognitiveload.detector",
     "productName": "Cognitive Load Detector",
-    "mac": {
-      "category": "public.app-category.productivity"
-    },
     "win": {
       "target": "nsis"
     },
-    "linux": {
-      "target": "AppImage"
+    "files": [
+      "src/**/*",
+      "ml/**/*",
+      "node_modules/**/*",
+      "package.json"
+    ],
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
     }
   }
 }
