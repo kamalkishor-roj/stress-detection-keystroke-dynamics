@@ -1,0 +1,29 @@
+{
+  "name": "cognitive-load-detector",
+  "version": "1.0.0",
+  "description": "Cognitive Load Detection via Keystroke & Mouse Dynamics",
+  "main": "src/main.js",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev"
+  },
+  "dependencies": {
+    "uiohook-napi": "^1.5.5"
+  },
+  "devDependencies": {
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.cognitiveload.detector",
+    "productName": "Cognitive Load Detector",
+    "mac": {
+      "category": "public.app-category.productivity"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  }
+}

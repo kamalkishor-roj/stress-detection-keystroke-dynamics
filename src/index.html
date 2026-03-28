@@ -1,0 +1,596 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cognitive Load Detector</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #10101a;
+      --surface2: #16162a;
+      --border: #1e1e3a;
+      --accent: #7c5cfc;
+      --accent2: #fc5cf8;
+      --accent3: #5cf8c8;
+      --text: #e8e6ff;
+      --text-dim: #6e6a8a;
+      --danger: #fc5c5c;
+      --warn: #fcb85c;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
+      user-select: none;
+    }
+
+    /* ── Titlebar ─────────────────────────────────────────────────────────── */
+    .titlebar {
+      -webkit-app-region: drag;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      height: 42px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .titlebar-title {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--text-dim);
+      letter-spacing: 3px;
+      text-transform: uppercase;
+    }
+
+    .titlebar-controls {
+      -webkit-app-region: no-drag;
+      display: flex;
+      gap: 8px;
+    }
+
+    .titlebar-btn {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+
+    .titlebar-btn:hover { opacity: 0.8; }
+    .titlebar-btn.close { background: #fc5c5c; }
+    .titlebar-btn.minimize { background: #fcb85c; }
+
+    /* ── Main Layout ──────────────────────────────────────────────────────── */
+    .app-content {
+      flex: 1;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      transition: opacity 0.4s ease, transform 0.4s ease;
+    }
+
+    .screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+      transform: translateY(16px);
+    }
+
+    /* ── Home Screen ──────────────────────────────────────────────────────── */
+    .neural-viz {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      pointer-events: none;
+    }
+
+    .neural-viz canvas {
+      width: 100%;
+      height: 100%;
+    }
+
+    .home-content {
+      position: relative;
+      z-index: 2;
+      text-align: center;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+    }
+
+    .brand {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .brand-icon {
+      width: 64px;
+      height: 64px;
+      position: relative;
+    }
+
+    .brand-icon svg {
+      width: 100%;
+      height: 100%;
+    }
+
+    .brand-name {
+      font-family: var(--sans);
+      font-size: 28px;
+      font-weight: 800;
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      letter-spacing: -0.5px;
+    }
+
+    .brand-sub {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 4px;
+      text-transform: uppercase;
+    }
+
+    /* ── Status Box ───────────────────────────────────────────────────────── */
+    .status-box {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 20px 28px;
+      min-width: 320px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .status-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .status-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    .status-value {
+      font-family: var(--mono);
+      font-size: 13px;
+      color: var(--text);
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--text-dim);
+      transition: background 0.3s;
+    }
+
+    .status-dot.active {
+      background: var(--accent3);
+      box-shadow: 0 0 8px var(--accent3);
+      animation: pulse-dot 1.5s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    /* ── Progress Bar ─────────────────────────────────────────────────────── */
+    .progress-wrap {
+      width: 100%;
+      height: 4px;
+      background: var(--border);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+
+    .progress-bar {
+      height: 100%;
+      background: linear-gradient(90deg, var(--accent), var(--accent2));
+      border-radius: 2px;
+      width: 0%;
+      transition: width 0.8s ease;
+    }
+
+    .progress-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    /* ── ML Processing ────────────────────────────────────────────────────── */
+    .ml-badge {
+      display: none;
+      align-items: center;
+      gap: 8px;
+      background: rgba(124, 92, 252, 0.15);
+      border: 1px solid rgba(124, 92, 252, 0.3);
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 2px;
+    }
+
+    .ml-badge.visible { display: flex; }
+
+    .ml-spinner {
+      width: 10px;
+      height: 10px;
+      border: 2px solid rgba(124, 92, 252, 0.3);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Buttons ──────────────────────────────────────────────────────────── */
+    .btn-row {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+
+    .btn {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      padding: 12px 28px;
+      transition: all 0.2s ease;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn::after {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: white;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .btn:active::after { opacity: 0.08; }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: white;
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 24px rgba(124, 92, 252, 0.4);
+    }
+
+    .btn-stop {
+      background: rgba(252, 92, 92, 0.15);
+      color: var(--danger);
+      border: 1px solid rgba(252, 92, 92, 0.3);
+    }
+
+    .btn-stop:hover {
+      background: rgba(252, 92, 92, 0.25);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: var(--surface2);
+      color: var(--text-dim);
+      border: 1px solid var(--border);
+    }
+
+    .btn-secondary:hover {
+      color: var(--text);
+      border-color: var(--accent);
+      transform: translateY(-1px);
+    }
+
+    .btn:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    /* ── Results Screen ───────────────────────────────────────────────────── */
+    #screen-results {
+      align-items: stretch;
+      justify-content: flex-start;
+      gap: 20px;
+      padding: 24px 32px;
+    }
+
+    .results-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .results-title {
+      font-family: var(--sans);
+      font-size: 20px;
+      font-weight: 800;
+      letter-spacing: -0.3px;
+    }
+
+    .results-count {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 2px;
+    }
+
+    .results-list {
+      flex: 1;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      padding-right: 4px;
+    }
+
+    .results-list::-webkit-scrollbar {
+      width: 4px;
+    }
+
+    .results-list::-webkit-scrollbar-track {
+      background: var(--surface);
+    }
+
+    .results-list::-webkit-scrollbar-thumb {
+      background: var(--border);
+      border-radius: 2px;
+    }
+
+    .result-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 16px 20px;
+      animation: slide-in 0.3s ease;
+    }
+
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    .result-card:hover {
+      border-color: rgba(124, 92, 252, 0.3);
+    }
+
+    .result-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .result-time {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--text-dim);
+      letter-spacing: 1px;
+    }
+
+    .result-batch {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent);
+      letter-spacing: 1px;
+    }
+
+    .result-body {
+      font-family: var(--mono);
+      font-size: 12px;
+      color: var(--accent3);
+      background: var(--surface2);
+      border-radius: 6px;
+      padding: 10px 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      line-height: 1.6;
+    }
+
+    .result-body.error {
+      color: var(--danger);
+    }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      color: var(--text-dim);
+    }
+
+    .empty-state-icon {
+      font-size: 40px;
+      opacity: 0.3;
+    }
+
+    .empty-state-text {
+      font-family: var(--mono);
+      font-size: 11px;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+
+    /* ── Tracking indicator in results ───────────────────────────────────── */
+    .tracking-pill {
+      display: none;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      background: rgba(92, 248, 200, 0.1);
+      border: 1px solid rgba(92, 248, 200, 0.2);
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--accent3);
+      letter-spacing: 1px;
+    }
+
+    .tracking-pill.visible { display: flex; }
+  </style>
+</head>
+<body>
+
+  <!-- Titlebar -->
+  <div class="titlebar">
+    <span class="titlebar-title">COGNITIVE LOAD DETECTOR</span>
+    <div class="titlebar-controls">
+      <button class="titlebar-btn minimize" onclick="window.electronAPI.minimizeWindow()"></button>
+      <button class="titlebar-btn close" onclick="window.electronAPI.closeWindow()"></button>
+    </div>
+  </div>
+
+  <!-- App Content -->
+  <div class="app-content">
+
+    <!-- ── HOME SCREEN ──────────────────────────────────────────────────── -->
+    <div class="screen" id="screen-home">
+      <div class="neural-viz">
+        <canvas id="neural-canvas"></canvas>
+      </div>
+
+      <div class="home-content">
+        <div class="brand">
+          <div class="brand-icon">
+            <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+              <circle cx="32" cy="32" r="30" stroke="url(#g1)" stroke-width="1.5" stroke-dasharray="4 3"/>
+              <circle cx="32" cy="32" r="18" stroke="url(#g2)" stroke-width="1.5"/>
+              <circle cx="32" cy="32" r="6" fill="url(#g1)"/>
+              <line x1="32" y1="2" x2="32" y2="14" stroke="#7c5cfc" stroke-width="1.5"/>
+              <line x1="32" y1="50" x2="32" y2="62" stroke="#fc5cf8" stroke-width="1.5"/>
+              <line x1="2" y1="32" x2="14" y2="32" stroke="#5cf8c8" stroke-width="1.5"/>
+              <line x1="50" y1="32" x2="62" y2="32" stroke="#7c5cfc" stroke-width="1.5"/>
+              <defs>
+                <linearGradient id="g1" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#7c5cfc"/>
+                  <stop offset="1" stop-color="#fc5cf8"/>
+                </linearGradient>
+                <linearGradient id="g2" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+                  <stop stop-color="#5cf8c8"/>
+                  <stop offset="1" stop-color="#7c5cfc"/>
+                </linearGradient>
+              </defs>
+            </svg>
+          </div>
+          <div class="brand-name">CognitiveLoad</div>
+          <div class="brand-sub">Neural Activity Monitor</div>
+        </div>
+
+        <div class="status-box">
+          <div class="status-row">
+            <span class="status-label">Status</span>
+            <div style="display:flex;align-items:center;gap:8px">
+              <div class="status-dot" id="status-dot"></div>
+              <span class="status-value" id="status-text">IDLE</span>
+            </div>
+          </div>
+
+          <div class="status-row" id="progress-row" style="display:none;flex-direction:column;align-items:stretch;gap:6px">
+            <div style="display:flex;justify-content:space-between">
+              <span class="progress-label">BATCH PROGRESS</span>
+              <span class="progress-label" id="progress-label">0 / 30s</span>
+            </div>
+            <div class="progress-wrap">
+              <div class="progress-bar" id="progress-bar"></div>
+            </div>
+          </div>
+
+          <div class="status-row">
+            <span class="status-label">Results</span>
+            <span class="status-value" id="result-count-home">0 batches</span>
+          </div>
+        </div>
+
+        <div class="ml-badge" id="ml-badge">
+          <div class="ml-spinner"></div>
+          ANALYSING BATCH
+        </div>
+
+        <div class="btn-row">
+          <button class="btn btn-primary" id="btn-start" onclick="handleStart()">▶ START</button>
+          <button class="btn btn-stop" id="btn-stop" style="display:none" onclick="handleStop()">■ STOP</button>
+          <button class="btn btn-secondary" id="btn-results" onclick="showResults()">RESULTS</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RESULTS SCREEN ───────────────────────────────────────────────── -->
+    <div class="screen hidden" id="screen-results">
+      <div class="results-header">
+        <div>
+          <div class="results-title">Analysis Results</div>
+          <div class="results-count" id="results-count-label">0 BATCHES ANALYSED</div>
+        </div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="tracking-pill" id="tracking-pill-results">
+            <div class="status-dot active"></div>
+            LIVE
+          </div>
+          <button class="btn btn-secondary" style="padding:8px 18px" onclick="clearResults()">CLEAR</button>
+          <button class="btn btn-secondary" style="padding:8px 18px" onclick="showHome()">← BACK</button>
+        </div>
+      </div>
+
+      <div class="results-list" id="results-list">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-state-icon">◎</div>
+          <div class="empty-state-text">No results yet — start tracking</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>
